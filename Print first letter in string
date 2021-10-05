@@ -1,0 +1,26 @@
+// 3 // Print first letter of every word in the string.
+#include<iostream>
+using namespace std;
+int main()
+{
+    string str;
+    cout << "\nEnter a string :  ";
+    getline(cin, str);
+
+    int flag = 1;
+    for(int i=0; i<str.size(); i++)
+    {
+        if((str[i] >= 'a' && str[i] <= 'z') || (str[i] >= 'A' && str[i] <= 'Z'))
+        {
+            if(flag == 1)
+            {
+            cout << str[i] << " ";
+            flag = 0;
+            }
+        }
+        else if(str[i] == ' ')
+        {
+            flag = 1;
+        }
+    }
+}
