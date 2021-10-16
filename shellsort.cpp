@@ -1,42 +1,42 @@
-// Shell Sort in C++ programming
-
-#include <iostream>
+#include<iostream>
 using namespace std;
-
-// Shell sort
-void shellSort(int array[], int n)
-{
-    // Rearrange elements at each n/2, n/4, n/8, ... intervals
-    for (int interval = n / 2; interval > 0; interval /= 2)
-    {
-        for (int i = interval; i < n; i += 1)
-        {
-            int temp = array[i];
-            int j;
-            for (j = i; j >= interval && array[j - interval] > temp; j -= interval)
-            {
-                array[j] = array[j - interval];
-            }
-            array[j] = temp;
-        }
-    }
+void swapping(int &a, int &b) {        //swap the content of a and b
+   int temp;
+   temp = a;
+   a = b;
+   b = temp;
 }
-
-// Print an array
-void printArray(int array[], int size)
-{
-    int i;
-    for (i = 0; i < size; i++)
-        cout << array[i] << " ";
-    cout << endl;
+void display(int *array, int size) {
+   for(int i = 0; i<size; i++)
+      cout << array[i] << " ";
+   cout << endl;
 }
-
-// Driver code
-int main()
-{
-    int data[] = {8, 9, 3, 7, 5, 6, 4, 1};
-    int size = sizeof(data) / sizeof(data[0]);
-    shellSort(data, size);
-    cout << "Sorted array: \n";
-    printArray(data, size);
+void shellSort(int *arr, int n) {
+   int gap, j, k;
+   for(gap = n/2; gap > 0; gap = gap / 2) {        //initially gap = n/2,
+      decreasing by gap /2
+      for(j = gap; j<n; j++) {
+         for(k = j-gap; k>=0; k -= gap) {
+            if(arr[k+gap] >= arr[k])
+               break;
+            else
+               swapping(arr[k+gap], arr[k]);
+         }
+      }
+   }
+}
+int main() {
+   int n;
+   cout << "Enter the number of elements: ";
+   cin >> n;
+   int arr[n];     //create an array with given number of elements
+   cout << "Enter elements:" << endl;
+   for(int i = 0; i<n; i++) {
+      cin >> arr[i];
+   }
+   cout << "Array before Sorting: ";
+   display(arr, n);
+   shellSort(arr, n);
+   cout << "Array after Sorting: ";
+   display(arr, n);
 }
