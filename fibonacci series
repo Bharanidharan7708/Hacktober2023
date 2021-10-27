@@ -1,0 +1,28 @@
+#include <stdio.h>
+//fibonacci series
+int fibonacci(int r);
+
+int main(void) {
+	int temp0 = 0;
+	int range;
+	scanf("%d\n",&range);   //how many numbers should be there in that series
+    for(int i=1;i<=range;++i){
+        printf("%d ",fibonacci(temp0));
+        ++temp0;
+    }
+	return 0;
+}
+
+int fibonacci(int r){
+    if(r == 0){
+        return 0;
+    }
+    else if(r == 1){
+        return 1;
+    }
+    else{
+        return fibonacci(r-1)+fibonacci(r-2);
+    }
+    
+}
+
