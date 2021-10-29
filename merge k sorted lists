@@ -1,0 +1,18 @@
+class Solution:
+        def mergeKLists(self, lists: List[ListNode]) -> ListNode:
+            heap=[]
+            for head in lists:
+                while head is not None:
+                    heappush(heap,head.val)
+                    head=head.next
+            head=None
+            next=None
+            while heap:
+                new_node=ListNode(heappop(heap))
+                if head is None:
+                    head=new_node
+                    tail=new_node
+                else:
+                    tail.next=new_node
+                    tail=tail.next
+            return head
