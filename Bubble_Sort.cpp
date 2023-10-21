@@ -1,29 +1,44 @@
+#include<iostream>
 using namespace std;
-int main()
-{
-    int n, i, arr[50], j, temp;
-    cout<<"Enter the Size (max. 50): ";
-    cin>>n;
-    cout<<"Enter "<<n<<" Numbers: ";
-    for(i=0; i<n; i++)
-        cin>>arr[i];
-    cout<<"\nSorting the Array using Bubble Sort Technique..\n";
-    for(i=0; i<(n-1); i++)
+
+int main(){
+  //declaring array
+  int array[5];
+  cout<<"Enter 5 numbers randomly : "<<endl;
+  for(int i=0; i<5; i++)
+  {
+    //Taking input in array
+    cin>>array[i];
+  }
+  cout<<endl;
+  cout<<"Input array is: "<<endl;
+
+  for(int j=0; j<5; j++)
+  {
+    //Displaying Array
+    cout<<"\t\t\tValue at "<<j<<" Index: "<<array[j]<<endl;
+  }
+  cout<<endl;
+  // Bubble Sort Starts Here
+  int temp;
+  for(int i2=0; i2<=4; i2++)
+  {
+    for(int j=0; j<4; j++)
     {
-        for(j=0; j<(n-i-1); j++)
-        {
-            if(arr[j]>arr[j+1])
-            {
-                temp = arr[j];
-                arr[j] = arr[j+1];
-                arr[j+1] = temp;
-            }
-        }
+      //Swapping element in if statement
+      if(array[j]>array[j+1])
+      {
+        temp=array[j];
+        array[j]=array[j+1];
+        array[j+1]=temp;
+      }
     }
-    cout<<"\nArray Sorted Successfully!\n";
-    cout<<"\nThe New Array is: \n";
-    for(i=0; i<n; i++)
-        cout<<arr[i]<<" ";
-    cout<<endl;
-    return 0;
+  }
+  // Displaying Sorted array
+  cout<<"  Sorted Array is: "<<endl;
+  for(int i3=0; i3<5; i3++)
+  {
+    cout<<"\t\t\tValue at "<<i3<<" Index: "<<array[i3]<<endl;
+  }
+  return 0;
 }
