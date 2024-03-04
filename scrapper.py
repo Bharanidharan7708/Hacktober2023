@@ -36,11 +36,19 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
     if unsuccessful_links is None:
         unsuccessful_links = {"url": [], "status_code": []}
 
+    combined_text = []  
+    links_final = {}  
+
+
     if current_depth > max_depth:
-        return
+        return combined_text, links_final   
+
 
     if url in visited:
-        return
+        return combined_text, links_final   
+    
+
+
 
     try:
         response = requests.get(url)
@@ -105,6 +113,13 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
     for key in link_data:
         link_data[key] += [None] * (max_length - len(link_data[key]))
 
+
+    combined_text = [title for title in link_data['title'] if title] + [paragraph for paragraph in link_data['paragraphs'] if paragraph]  
+
+
+    links_final = {"link_success": successful_links, "link_failure": unsuccessful_links}   
+
+
     link_df = pd.DataFrame(link_data)
     successful_links_df = pd.DataFrame(successful_links)
     unsuccessful_links_df = pd.DataFrame(unsuccessful_links)
@@ -113,8 +128,11 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
     successful_links_df.to_csv(os.path.join(client_folder, "successful_links.csv"), index=False)
     unsuccessful_links_df.to_csv(os.path.join(client_folder, "unsuccessful_links.csv"), index=False)
 
+    return combined_text, links_final
+
+
 if __name__ == "__main__":
-    start_url = "https://itchotels.com"
+    start_url = "https://itchotels.com/"
     depth = 2
     client_name = "client_01"
 
@@ -124,6 +142,6 @@ if __name__ == "__main__":
                  "h4_headings": [], "lists": [], "images": []}
     successful_links = {"url": [], "status_code": []}
     unsuccessful_links = {"url": [], "status_code": []}
-    scrape_website(start_url, depth, client_name, link_data=link_data, successful_links=successful_links, unsuccessful_links=unsuccessful_links)
+    text, links_dict = scrape_website(start_url, depth, client_name, link_data=link_data, successful_links=successful_links, unsuccessful_links=unsuccessful_links)  # Corrected line
 
     print("Scraping complete!")
