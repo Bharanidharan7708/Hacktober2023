@@ -114,7 +114,7 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
         link_data[key] += [None] * (max_length - len(link_data[key]))
 
 
-    combined_text = [title for title in link_data['title'] if title] + [paragraph for paragraph in link_data['paragraphs'] if paragraph]  
+    combined_text = [title for title in link_data['title'] if title] + [paragraph for paragraph in link_data['paragraphs'] if paragraph] 
 
 
     links_final = {"link_success": successful_links, "link_failure": unsuccessful_links}   
@@ -132,7 +132,7 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
 
 
 if __name__ == "__main__":
-    start_url = "https://itchotels.com/"
+    start_url = "https://docs.trychroma.com/"
     depth = 2
     client_name = "client_01"
 
