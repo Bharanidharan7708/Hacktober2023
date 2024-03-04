@@ -115,9 +115,14 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
 
 
     combined_text = []
+
     combined_text.extend(title for title in link_data['title'] if title)
+
+
     paragraphs_flat = [paragraph for sublist in link_data['paragraphs'] for paragraph in sublist if paragraph]
     combined_text.extend(paragraphs_flat)
+
+
 
 
     links_final = {"link_success": successful_links['url'], "link_failure": unsuccessful_links['url']}   
