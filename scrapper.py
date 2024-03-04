@@ -52,7 +52,7 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
             link_data["url"].append(url)
             link_data["status_code"].append(response.status_code)
             link_data["text"].append(soup.get_text())
-            link_data["title"].append(extract_title(soup))
+            link_data["title"].append(extract_title(soup) if extract_title(soup) is not None else None)
             link_data["paragraphs"].append(extract_paragraphs(soup))
             link_data["h1_headings"].append(extract_headings(soup, 'h1'))
             link_data["h2_headings"].append(extract_headings(soup, 'h2'))
@@ -99,6 +99,12 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
 
     client_folder = os.path.join(os.getcwd(), client_name)
     os.makedirs(client_folder, exist_ok=True)
+    
+    # Pading arrays to ensure consistent length - to avoid previous error 
+    max_length = max(len(link_data[key]) for key in link_data)
+    for key in link_data:
+        link_data[key] += [None] * (max_length - len(link_data[key]))
+
     link_df = pd.DataFrame(link_data)
     successful_links_df = pd.DataFrame(successful_links)
     unsuccessful_links_df = pd.DataFrame(unsuccessful_links)
@@ -108,7 +114,7 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
     unsuccessful_links_df.to_csv(os.path.join(client_folder, "unsuccessful_links.csv"), index=False)
 
 if __name__ == "__main__":
-    start_url = "https://docs.trychroma.com/"
+    start_url = "https://itchotels.com"
     depth = 2
     client_name = "client_01"
 
