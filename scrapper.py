@@ -1,8 +1,11 @@
+#combined text where ind[0] have all info about page 1
+
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import pandas as pd
 import os
+import re
 
 def extract_title(soup):
     title_tag = soup.title
@@ -24,6 +27,17 @@ def extract_images(soup):
     images = soup.select('img')
     return [img['src'] for img in images]
 
+def clean_text(raw_text):
+    cleaned_text = re.sub(r'\s+', ' ', raw_text)
+    cleaned_text = re.sub(r'\n', '', cleaned_text)
+    cleaned_text = re.sub(r'\r', '', cleaned_text)
+    cleaned_text = re.sub(r'\xa0', '', cleaned_text)
+    cleaned_text = re.sub(r'\s{2,}', ' ', cleaned_text)  
+    cleaned_text = cleaned_text.strip()
+    return cleaned_text
+
+combined_text = []  #for final extracted_text_list
+
 def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, link_data=None, successful_links=None, unsuccessful_links=None):
     if visited is None:
         visited = set()
@@ -36,19 +50,13 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
     if unsuccessful_links is None:
         unsuccessful_links = {"url": [], "status_code": []}
 
-    combined_text = []  
     links_final = {}  
-
 
     if current_depth > max_depth:
         return combined_text, links_final   
 
-
     if url in visited:
         return combined_text, links_final   
-    
-
-
 
     try:
         response = requests.get(url)
@@ -80,30 +88,30 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
             unsuccessful_links["status_code"].append(response.status_code)
             link_data["url"].append(url)
             link_data["status_code"].append(response.status_code)
-            link_data["text"].append(None)
+            link_data["text"].append(" ")
             link_data["title"].append(" ")
             link_data["paragraphs"].append(" ")
-            link_data["h1_headings"].append(None)
-            link_data["h2_headings"].append(None)
-            link_data["h3_headings"].append(None)
-            link_data["h4_headings"].append(None)
-            link_data["lists"].append(None)
-            link_data["images"].append(None)
+            link_data["h1_headings"].append(" ")
+            link_data["h2_headings"].append(" ")
+            link_data["h3_headings"].append(" ")
+            link_data["h4_headings"].append(" ")
+            link_data["lists"].append(" ")
+            link_data["images"].append(" ")
     except Exception as e:
         print(f"Error scraping {url}: {e}")
         unsuccessful_links["url"].append(url)
         unsuccessful_links["status_code"].append("Error")
         link_data["url"].append(url)
         link_data["status_code"].append("Error")
-        link_data["text"].append(None)
+        link_data["text"].append(" ")
         link_data["title"].append(" ")
         link_data["paragraphs"].append(" ")
         link_data["h1_headings"].append(" ")
-        link_data["h2_headings"].append(None)
-        link_data["h3_headings"].append(None)
-        link_data["h4_headings"].append(None)
-        link_data["lists"].append(None)
-        link_data["images"].append(None)
+        link_data["h2_headings"].append(" ")
+        link_data["h3_headings"].append(" ")
+        link_data["h4_headings"].append(" ")
+        link_data["lists"].append(" ")
+        link_data["images"].append(" ")
 
     client_folder = os.path.join(os.getcwd(), client_name)
     os.makedirs(client_folder, exist_ok=True)
@@ -113,20 +121,18 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
     for key in link_data:
         link_data[key] += [None] * (max_length - len(link_data[key]))
 
+    page_info = ""
+    page_info += " ".join(title for title in link_data['title'] if title) + "\n"
+    page_info += " ".join(paragraph for sublist in link_data['paragraphs'] for paragraph in sublist if paragraph) + "\n"
+    page_info += " ".join(heading for sublist in link_data['h1_headings'] for heading in sublist if heading) + "\n"
+    page_info += " ".join(heading for sublist in link_data['h2_headings'] for heading in sublist if heading) + "\n"
+    page_info += " ".join(heading for sublist in link_data['h3_headings'] for heading in sublist if heading) + "\n"
+    page_info += " ".join(heading for sublist in link_data['h4_headings'] for heading in sublist if heading) + "\n"
+    page_info += " ".join(list_extracted for sublist in link_data['lists'] for list_extracted in sublist if list_extracted)
 
-    combined_text = []
-
-    combined_text.extend(title for title in link_data['title'] if title)
-
-
-    paragraphs_flat = [paragraph for sublist in link_data['paragraphs'] for paragraph in sublist if paragraph]
-    combined_text.extend(paragraphs_flat)
-
-
-
+    combined_text.append(page_info)
 
     links_final = {"link_success": successful_links['url'], "link_failure": unsuccessful_links['url']}   
-
 
     link_df = pd.DataFrame(link_data)
     successful_links_df = pd.DataFrame(successful_links)
@@ -140,7 +146,7 @@ def scrape_website(url, max_depth, client_name, current_depth=1, visited=None, l
 
 
 if __name__ == "__main__":
-    start_url = "https://milvus.io/blog/what-milvus-version-to-start-with.md"
+    start_url = "https://itchotels.com"
     depth = 2
     client_name = "client_01"
 
@@ -150,6 +156,7 @@ if __name__ == "__main__":
                  "h4_headings": [], "lists": [], "images": []}
     successful_links = {"url": [], "status_code": []}
     unsuccessful_links = {"url": [], "status_code": []}
-    text, links_dict = scrape_website(start_url, depth, client_name, link_data=link_data, successful_links=successful_links, unsuccessful_links=unsuccessful_links)  # Corrected line
+    extracted_text_list, links_dict = scrape_website(start_url, depth, client_name, link_data=link_data, successful_links=successful_links, unsuccessful_links=unsuccessful_links)  # Corrected line
+    text = [clean_text(text_list) for text_list in extracted_text_list]
 
     print("Scraping complete!")
