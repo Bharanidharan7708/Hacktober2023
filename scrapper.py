@@ -15,10 +15,10 @@ from pymilvus import connections
 # from pymilvus import Collection
  
  
-connections.connect(          #to connect with db
-    host='20.244.48.175',
-    port='19530'
-)
+# connections.connect(          #to connect with db
+#     host='20.244.48.175',
+#     port='19530'
+# )
  
  
 logging.basicConfig(
@@ -45,15 +45,15 @@ llm = AzureOpenAI(
 )
  
 # You need to deploy your own embedding model as well as your own chat completion model
-embed_model = AzureOpenAIEmbedding(
-    model="text-embedding-ada-002",
-    deployment_name=EMBEDDING_MODEL,
-    api_key=api_key,
-    azure_endpoint=azure_api,
-    api_version=api_version,
-)
+embeddings = OpenAIEmbeddings(
+        deployment=EMBEDDING_MODEL,
+        model="text-embedding-ada-002",
+        openai_api_base=azure_api,
+        openai_api_type="azure",
+        chunk_size=1
+    )
 Settings.llm = llm
-Settings.embed_model = embed_model
+Settings.embed_model = embeddings
  
 ##MILVUS
 vector_store = MilvusVectorStore(host='20.244.48.175',
@@ -69,8 +69,15 @@ index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 #     chat_store=chat_store,
 #     chat_store_key="user1",
 # )
- 
-query = "How many opulent rooms and suits are present in the ITC Mughal hotel"
-query_engine = index.as_query_engine()
-answer = query_engine.query(query)
-print(answer)
+
+
+def search_and_query(collection, search_vectors, search_field, search_params):
+    collection.load()
+    result = collection.search(search_vectors, search_field, search_params, limit=5, output_fields=["id", "text"])
+    return result
+
+query = "I want the most luxurious and grandest hotel in chennai"
+query_vector = embeddings.embed_query(query)
+
+result = search_and_query(collection, [query_vector], "embedding", {"metric_type": "L2", "params": {"nprobe": 10}})
+print(result)
