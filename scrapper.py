@@ -1,131 +1,14 @@
-[2:21 PM] Vaibhav Achar (IN)
-from llama_index.llms.azure_openai import AzureOpenAI
- 
-from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
- 
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
- 
-import logging
- 
-import sys
- 
-from llama_index.core import Settings
- 
-from llama_index.vector_stores.milvus import MilvusVectorStore
- 
- 
-from llama_index.core.storage.chat_store import SimpleChatStore
- 
-from llama_index.core.memory import ChatMemoryBuffer
- 
-from pymilvus import connections
-from langchain.embeddings.openai import OpenAIEmbeddings
- 
- 
-# from pymilvus import utility
- 
-# from pymilvus import Collection
- 
- 
-# connections.connect(          #to connect with db
- 
-#     host='20.244.48.175',
- 
-#     port='19530'
- 
-# )
- 
- 
-logging.basicConfig(
- 
-    stream=sys.stdout, level=logging.INFO
- 
-)  # logging.DEBUG for more verbose output
- 
-logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
- 
- 
-azure_api = "https://sravanakumar13sathish.openai.azure.com/"
- 
-OPENAI_API_KEY = "f93979cbf9894257affd4fee8b4e08fb"
- 
-api_version = "2023-03-15-preview"
- 
-EMBEDDING_MODEL = "text-embedding-ada-002"
- 
-TEXT_COMPLETION_MODEL = 'Policy_GPT'
- 
-CHAT_COMPLETION_MODEL = 'gpt-35-turbo'
- 
- 
-llm = AzureOpenAI(
- 
-    model="gpt-35-turbo",
- 
-    deployment_name=CHAT_COMPLETION_MODEL,
- 
-    api_key=OPENAI_API_KEY,
- 
-    azure_endpoint=azure_api,
- 
-    api_version=api_version,
- 
-)
- 
-# You need to deploy your own embedding model as well as your own chat completion model
- 
-embeddings = OpenAIEmbeddings(
- 
-        deployment=EMBEDDING_MODEL,
- 
-        model="text-embedding-ada-002",
- 
-        openai_api_base=OPENAI_API_KEY,
- 
-        openai_api_type="azure",
- 
-        chunk_size=1
- 
-    )
- 
-Settings.llm = llm
- 
-Settings.embed_model = embeddings
- 
-##MILVUS
- 
-vector_store = MilvusVectorStore(uri='http://20.244.48.175:19530',
- 
-                                 collection_name='ITC_ITCHOTELS_scrapped')
- 
-index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
- 
- 
-# chat_store = SimpleChatStore()
- 
-# chat_memory = ChatMemoryBuffer.from_defaults(
- 
-#     token_limit=3000,
- 
-#     chat_store=chat_store,
- 
-#     chat_store_key="user1",
- 
-# )
- 
- 
-def search_and_query(collection, search_vectors, search_field, search_params):
- 
-    collection.load()
- 
-    result = collection.search(search_vectors, search_field, search_params, limit=5, output_fields=["id", "text"])
- 
-    return result
- 
-query = "I want the most luxurious and grandest hotel in chennai"
- 
-query_vector = embeddings.embed_query(query)
- 
-result = search_and_query(vector_store, [query_vector], "embedding", {"metric_type": "L2", "params": {"nprobe": 10}})
- 
-print(result)
+To load a Milvus collection into your LlamaIndex, you would need to use the MilvusVectorStore class from the llama_index.vector_stores module. Here is a step-by-step guide on how to do it:
+First, you need to import the necessary modules:
+from llama_index import VectorStoreIndex, Documentfrom llama_index.vector_stores import MilvusVectorStorefrom llama_index.storage.storage_context import StorageContext
+Next, create an instance of MilvusVectorStore. You need to specify the dimension of your embeddings and set overwrite to False to avoid overwriting the existing collection:
+vector_store = MilvusVectorStore(dim=1536, overwrite=False)
+Create a StorageContext using the vector_store:
+storage_context = StorageContext.from_defaults(vector_store=vector_store)
+Now, you need to create Document instances for each of your data points in the Milvus collection. Each Document should contain the text and metadata. For example:
+documents = [Document(text="<text>", metadata={"id": "<id>", "n_tokens": "<n_tokens>"}) for _ in range(n)]
+Replace <text>, <id>, and <n_tokens> with your actual data. n is the number of data points in your Milvus collection.
+Finally, create a VectorStoreIndex from the documents:
+index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+Now, your Milvus collection is loaded into the LlamaIndex and you can use it for querying.
+has context menu
