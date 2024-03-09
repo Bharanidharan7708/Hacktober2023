@@ -1,24 +1,24 @@
-import os
-import re
-
-def clean_txt_files(directory_path):
-    if not os.path.isdir(directory_path):
-        print(f"Directory '{directory_path}' not found.")
-        return
-
-    for filename in os.listdir(directory_path):
-        if filename.endswith(".txt"):
-            file_path = os.path.join(directory_path, filename)
-            with open(file_path, "r", encoding="utf-8") as file:  
-                content = file.read()
-
-                cleaned_content = re.sub(r"[^\w\s%$\n]", "", content)
-                cleaned_content = re.sub(r"(\n\s*){2,}", "\n\n", cleaned_content)  
-
-            with open(file_path, "w", encoding="utf-8") as file:  
-                file.write(cleaned_content)
-
-            print(f"File '{filename}' cleaned successfully.")
-
-directory_path = r"C:\Users\Lenovo\Desktop\Experiments\Scrapper\test_dir"
-clean_txt_files(directory_path)
+from langdetect import detect, detect_langs
+ 
+def detect_language(sentence):
+    detected_lang = detect(sentence)
+    return detected_lang
+ 
+def get_language_name(language_code):
+    # You can use a language mapping dictionary to get the language name from the language code
+    language_mapping = {
+        'en': 'English',
+        'fr': 'French',
+        'es': 'Spanish',
+        'hi':'Hindi',
+        'pa':'Punjabi',
+        # Add more language codes and names as needed
+    }
+    return language_mapping.get(language_code, 'Unknown')
+ 
+# Example usage
+sentence = "ਤੁਸੀ ਕਿਵੇਂ ਹੋ"
+detected_language = detect_language(sentence)
+print (detected_language)
+language_name = get_language_name(detected_language)
+print(f"The detected language is: {language_name}")
