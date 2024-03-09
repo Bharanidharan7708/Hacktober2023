@@ -6,7 +6,6 @@ from llama_index.vector_stores.milvus import MilvusVectorStore
 from llama_index.core.storage.chat_store import SimpleChatStore
 from llama_index.core.memory import ChatMemoryBuffer
 from pymilvus import connections
-from langchain.embeddings.openai import OpenAIEmbeddings
 from pymilvus import utility
 from pymilvus import Collection
 from llama_index.core import VectorStoreIndex, ServiceContext
@@ -58,7 +57,7 @@ Settings.embed_model = embed_model
 # index = VectorStoreIndex.from_documents(
 #     documents, storage_context=storage_context)
 def chatbot(text_input,history):
-    vector_store = MilvusVectorStore(uri='http://20.244.48.175:19530', collection_name='ITC_Chatbot')
+    vector_store = MilvusVectorStore(uri='http://20.244.48.175:19530', collection_name='ITC_Demo')
     index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
     # index = GPTVectorStoreIndex.from_vector_store(vector_store=vector_store)
 
@@ -71,17 +70,20 @@ def chatbot(text_input,history):
         system_prompt=(
             """You are an ITC hotels chatbot, your task is to answer questions asked by the user regarding the hotels using the data you have been provided.
             If the question asked is not mentioned in the data provided to you, simply mention, I do not know the answer to the question you asked
-            If user asks a question not related to ITC hotels, simply mention I do not know the answer to the question you asked
+            If user asks a question not related to ITC hotels, simply mention I do not know the answer to the question you asked, 
+            most importantly answer in the same language as the user input
             """
             # """You are an ITC hotels chatbot, your task is to answer questions asked by the user regarding the ITC Rajputana hotel,Jaipur using the data you have been provided.
             # If the question asked is not mentioned in the data provided to you, simply mention, I do not know the answer to the question you asked
-            # If user asks a question not related to ITC hotels, simply mention I do not know the answer to the question you asked """
+            # If user asks a question not related to ITC hotels, simply mention I do not know the answer to the question you asked"""
             
         ),
     )
 
-    detected_lang = new.detect(text_input)
 
+ 
+
+    detected_lang = new.detect(text_input) #hi, en, ta
     if (detected_lang != 'en'):
         text_input_temp = new.translate(text_input, 'en') #to translate the user input to english
         if not history:
@@ -93,13 +95,14 @@ def chatbot(text_input,history):
         elif history[0] == 'Agra':
             context = "ITC Mughal, Agra"
         else:
-            context = "ITC hotels"
+            context = "ITC hotels" 
 
         context = new.translate(context, detected_lang) #here we're translating the context to user language
 
+
     else:
         if not history:
-            history = new.city(text_input_temp)
+            history = new.city(text_input)
         if history[0] == 'Jaipur':
             context = "ITC Rajputana, Jaipur"
         elif history[0] == 'Vellore':
@@ -118,13 +121,14 @@ def chatbot(text_input,history):
     # for message in chat_engine.chat_history:
     #     print(f"{message.role}: {message.content}") 
     chat_engine.reset()
-    return [response,history]
+    return [f"{response}",history]
 
 
 history=[]
-text_input = "I am going to Jaipur "
+text_input = "ಆಗ್ರಾದಲ್ಲಿನ ಹೋಟೆಲ್‌ಗಳು"
 resp = chatbot(text_input,history)
-print(resp[0])
+print(resp[1])
+
 # history=['Jaipur']
 # text_input = "rooms"
 # resp = chatbot(text_input,history)
