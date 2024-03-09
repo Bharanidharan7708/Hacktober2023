@@ -95,7 +95,19 @@ def chatbot(text_input,history):
         else:
             context = "ITC hotels"
 
-        context = new.translate(context, detected_lang)
+        context = new.translate(context, detected_lang) #here we're translating the context to user language
+
+    else:
+        if not history:
+            history = new.city(text_input_temp)
+        if history[0] == 'Jaipur':
+            context = "ITC Rajputana, Jaipur"
+        elif history[0] == 'Vellore':
+            context = "Fortune Park, Vellore"
+        elif history[0] == 'Agra':
+            context = "ITC Mughal, Agra"
+        else:
+            context = "ITC hotels"
 
         
     text_input = text_input + '?'
