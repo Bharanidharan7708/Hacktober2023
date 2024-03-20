@@ -1,149 +1,188 @@
-from llama_index.llms.azure_openai import AzureOpenAI
-from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
-from llama_index.core import Settings
-from llama_index.vector_stores.milvus import MilvusVectorStore
-from llama_index.core.storage.chat_store import SimpleChatStore
-from llama_index.core.memory import ChatMemoryBuffer
-from pymilvus import connections
-from pymilvus import utility
-from pymilvus import Collection
-from llama_index.core import VectorStoreIndex, ServiceContext
-from llama_index.core.storage.storage_context import StorageContext
-import textwrap
-from llama_index.core.memory import ChatMemoryBuffer
-from llama_index.core import GPTVectorStoreIndex
-import new
+#combined text where ind[0] have all info about page 1
+import json
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+import pandas as pd
+import os
+import re
+import datetime
+
+def extract_title(soup):
+    title_tag = soup.title
+    return title_tag.text.strip() if title_tag else None
+
+def extract_paragraphs(soup):
+    paragraphs = soup.select('p')
+    return [p.text.strip() for p in paragraphs]
+
+def extract_headings(soup, tag):
+    headings = soup.select(tag)
+    return [heading.text.strip() for heading in headings]
+
+def extract_lists(soup):
+    lists_text = soup.select('li')
+    return [li.text.strip() for li in lists_text]
+
+def extract_images(soup):
+    images = soup.select('img')
+    return [img['src'] for img in images]
+
+def clean_text(raw_text):
+    cleaned_text = re.sub(r'\s+', ' ', raw_text)
+    cleaned_text = re.sub(r'\n', '', cleaned_text)
+    cleaned_text = re.sub(r'\r', '', cleaned_text)
+    cleaned_text = re.sub(r'\xa0', '', cleaned_text)
+    cleaned_text = re.sub(r'\s{2,}', ' ', cleaned_text)  
+    cleaned_text = cleaned_text.strip()
+    return cleaned_text
+
+def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, link_data=None, successful_links=None, unsuccessful_links=None, json_data=None):
+    combined_text = []  
+    if visited is None:
+        visited = set()
+    if link_data is None:
+        link_data = {"url": [], "status_code": [], "text": [], "title": [], "paragraphs": [],
+                     "h1_headings": [], "h2_headings": [], "h3_headings": [],
+                     "h4_headings": [], "lists": [], "images": [], "metadata": []}
+    if successful_links is None:
+        successful_links = {"url": [], "status_code": []}
+    if unsuccessful_links is None:
+        unsuccessful_links = {"url": [], "status_code": []}
+    if json_data is None:
+        json_data = {"url":[], "content":[]}
+
+    links_final = {}  
+
+    if current_depth > max_depth:
+        return [], links_final, json_data  
+
+    if url in visited:
+        print(f"Skipping {url} - Already visited")
+        return [], links_final, json_data  
+
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
+            visited.add(url)
+
+            print(f"Scraping {url}")
+            link_data["url"].append(url)
+            link_data["status_code"].append(response.status_code)
+            page_info = ""
+            page_info += " ".join(title for title in extract_title(soup) if title) + "\n"
+            page_info += " ".join(paragraph for paragraph in extract_paragraphs(soup) if paragraph) + "\n"
+            page_info += " ".join(heading for heading in extract_headings(soup, 'h1') if heading) + "\n"
+            page_info += " ".join(heading for heading in extract_headings(soup, 'h2') if heading) + "\n"
+            page_info += " ".join(heading for heading in extract_headings(soup, 'h3') if heading) + "\n"
+            page_info += " ".join(heading for heading in extract_headings(soup, 'h4') if heading) + "\n"
+            page_info += " ".join(list_item for list_item in extract_lists(soup) if list_item) + "\n"
+            combined_text.append(page_info)
+            json_data['url'].append(url)
+            json_data['content'].append(page_info)
 
 
-azure_api = "https://sravanakumar13sathish.openai.azure.com/"
-api_key = "f93979cbf9894257affd4fee8b4e08fb"
-api_version = "2023-03-15-preview"
-EMBEDDING_MODEL = "text-embedding-ada-002"
-TEXT_COMPLETION_MODEL = 'Policy_GPT'
-CHAT_COMPLETION_MODEL = 'gpt-35-turbo-16k'
-llm = AzureOpenAI(
-    model="gpt-35-turbo-16k",
-    deployment_name=CHAT_COMPLETION_MODEL,
-    api_key=api_key,
-    azure_endpoint=azure_api,
-    api_version=api_version,
-)
+            links = soup.find_all('a', href=True)
+            for link in links:
+                next_url = urljoin(url, link['href'])
+                page_info, _, _ = scrape_website2(next_url, max_depth, client_name, current_depth + 1, visited, link_data, successful_links, unsuccessful_links, json_data)
+                combined_text.extend(page_info)
 
-embed_model = AzureOpenAIEmbedding(
-    model="text-embedding-ada-002",
-    deployment_name=EMBEDDING_MODEL,
-    api_key=api_key,
-    azure_endpoint=azure_api,
-    api_version=api_version,
-)
-Settings.llm = llm
-Settings.embed_model = embed_model
-
-# GPTVectorStoreIndex
-# documents = SimpleDirectoryReader("C:/Users/vaibhavg/Desktop/llamaindex/dataset1").load_data()
-# vector_store = MilvusVectorStore(uri='http://20.244.48.175:19530', collection_name='ITC_Chatbot1', dim=1536 )
-# storage_context = StorageContext.from_defaults(vector_store=vector_store)
-# index = GPTVectorStoreIndex.from_documents(
-#     documents, storage_context=storage_context)
-
-#default reader
-# documents = SimpleDirectoryReader("C:/Users/vaibhavg/Desktop/llamaindex/dataset1").load_data()
-# # # service_context = ServiceContext.from_defaults(   chunk_size=512, chunk_overlap=50)
-# # # index = VectorStoreIndex.from_documents(   documents, service_context=service_context)
-
-# vector_store = MilvusVectorStore(uri='http://20.244.48.175:19530', collection_name='ITC_Chatbot', dim=1536 ,overwrite = True)
-# storage_context = StorageContext.from_defaults(vector_store=vector_store)
-# index = VectorStoreIndex.from_documents(
-#     documents, storage_context=storage_context)
-def chatbot(text_input,history):
-    vector_store = MilvusVectorStore(uri='http://20.244.48.175:19530', collection_name='ITC_Demo')
-    index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-    # index = GPTVectorStoreIndex.from_vector_store(vector_store=vector_store)
-
-    memory = ChatMemoryBuffer.from_defaults(token_limit=9000)
-
-    chat_engine = index.as_chat_engine(
-        similarity_top_k=8,
-        chat_mode="context",
-        memory=memory,
-        system_prompt=(
-            """You are an ITC hotels chatbot, your task is to answer questions asked by the user regarding the hotels using the data you have been provided.
-            If the question asked is not mentioned in the data provided to you, simply mention, I do not know the answer to the question you asked
-            If user asks a question not related to ITC hotels, simply mention I do not know the answer to the question you asked, 
-            most importantly answer in the same language as the user input
-            """
-            # """You are an ITC hotels chatbot, your task is to answer questions asked by the user regarding the ITC Rajputana hotel,Jaipur using the data you have been provided.
-            # If the question asked is not mentioned in the data provided to you, simply mention, I do not know the answer to the question you asked
-            # If user asks a question not related to ITC hotels, simply mention I do not know the answer to the question you asked"""
-            
-        ),
-    )
-
-
- 
-
-    detected_lang = new.detect(text_input) #hi, en, ta
-    if (detected_lang != 'en'):
-        text_input_temp = new.translate(text_input, 'en') #to translate the user input to english
-        if not history:
-            history = new.city(text_input_temp)
-        if history[0] == 'Jaipur':
-            context = "ITC Rajputana, Jaipur"
-        elif history[0] == 'Vellore':
-            context = "Fortune Park, Vellore"
-        elif history[0] == 'Agra':
-            context = "ITC Mughal, Agra"
+            successful_links["url"].append(url)
+            successful_links["status_code"].append(response.status_code)
         else:
-            context = "ITC hotels" 
+            unsuccessful_links["url"].append(url)
+            unsuccessful_links["status_code"].append(response.status_code)
+            link_data["url"].append(url)
+            link_data["status_code"].append(response.status_code)
+            link_data["text"].append(" ")
+            link_data["title"].append(" ")
+            link_data["paragraphs"].append(" ")
+            link_data["h1_headings"].append(" ")
+            link_data["h2_headings"].append(" ")
+            link_data["h3_headings"].append(" ")
+            link_data["h4_headings"].append(" ")
+            link_data["lists"].append(" ")
+            link_data["images"].append(" ")
+    except Exception as e:
+        print(f"Error scraping {url}: {e}")
+        unsuccessful_links["url"].append(url)
+        unsuccessful_links["status_code"].append("Error")
 
-        context = new.translate(context, detected_lang) #here we're translating the context to user language
+    links_final = {"link_success": successful_links['url'], "link_failure": unsuccessful_links['url']}
+    final_text = []
 
-
-    else:
-        if not history:
-            history = new.city(text_input)
-        if history[0] == 'Jaipur':
-            context = "ITC Rajputana, Jaipur"
-        elif history[0] == 'Vellore':
-            context = "Fortune Park, Vellore"
-        elif history[0] == 'Agra':
-            context = "ITC Mughal, Agra"
-        else:
-            context = "ITC hotels"
-
-        
-    text_input = text_input + '?'
-    # print("||",history,context)
-    # chat_engine.reset()
-    response = chat_engine.chat(context) 
-    response = chat_engine.chat(text_input)
-    # for message in chat_engine.chat_history:
-    #     print(f"{message.role}: {message.content}") 
-    chat_engine.reset()
-    return [f"{response}",history]
-
-
-history=[]
-text_input = "ಆಗ್ರಾದಲ್ಲಿನ ಹೋಟೆಲ್‌ಗಳು"
-resp = chatbot(text_input,history)
-print(resp[1])
-
-# history=['Jaipur']
-# text_input = "rooms"
-# resp = chatbot(text_input,history)
-# print(resp[0])
-
-
-
-# history=['Vellore']
-# text_input = "Operational Period: all day"
-# resp = chatbot(text_input,history)
-# print(resp[0])
-# Operational Period:
-
-        # for message in chat_engine.chat_history:
-        #     print(f"{message.role}: {message.content}")
+    for i in range(len(combined_text)):
+        final_text.append(combined_text[i] + " Source Link: " + links_final['link_success'][i])
     
+    json_list = []
+    for url, content in zip(json_data['url'], json_data['content']):
+        json_list.append({"url": url, "content": content})
+    return final_text, links_final, json_list
 
- 
+
+
+def compare_jsons(previous_json_path, current_json_path):
+    with open(previous_json_path, "r") as f:
+        previous_json = json.load(f)
+    
+    with open(current_json_path, "r") as f:
+        current_json = json.load(f)
+
+    if isinstance(previous_json, list) and isinstance(current_json, list):
+        previous_urls = {entry["url"]: entry["content"] for entry in previous_json}
+        current_urls = {entry["url"]: entry["content"] for entry in current_json}
+    else:
+        previous_urls = previous_json
+        current_urls = current_json
+    if previous_urls == current_urls:
+        return {}  # No changes
+
+    changed_urls = {}
+
+    for url, previous_content in previous_urls.items():
+        if url in current_urls:
+            current_content = current_urls[url]
+            if previous_content.strip() != current_content.strip():
+                changed_urls[url] = current_content
+        else:
+            changed_urls[url] = "URL no longer exists"
+
+    new_urls = {url: content for url, content in current_urls.items() if url not in previous_urls}
+    changed_urls.update(new_urls)
+
+    return changed_urls
+
+
+
+if __name__ == "__main__":
+    start_url = "https://www.itchotels.com/"
+    depth = 2
+    client_name = "client_01"
+
+    print("Scraping website...")
+    link_data = {"url": [], "status_code": [], "text": [], "title": [], "paragraphs": [],
+                 "h1_headings": [], "h2_headings": [], "h3_headings": [],
+                 "h4_headings": [], "lists": [], "images": [], "metadata": []}
+    successful_links = {"url": [], "status_code": []}
+    unsuccessful_links = {"url": [], "status_code": []}
+    extracted_text_list, links_dict, json_data = scrape_website2(start_url, depth, client_name, link_data=link_data, successful_links=successful_links, unsuccessful_links=unsuccessful_links)  
+
+    directory = "extracted_data_json"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    output_file_path = "extracted_data_json/textual_data_{timestamp}.json"
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_file_path = output_file_path.format(timestamp=timestamp)
+
+    with open(output_file_path, "w+") as json_file:
+        json.dump(json_data, json_file, indent=4)
+
+    print("Scraping complete and  saved Json!")
+
+
+    previous_json_path = "scraped_data.json"
+    current_json_path = "scraped_data.json"
+    changed_urls = compare_jsons(previous_json_path, current_json_path)
+    print("No of changed urls:", len(changed_urls))
