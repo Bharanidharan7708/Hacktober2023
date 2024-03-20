@@ -37,8 +37,11 @@ def clean_text(raw_text):
     cleaned_text = cleaned_text.strip()
     return cleaned_text
 
+global link_data, successful_links, unsuccessful_links
 def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, link_data=None, successful_links=None, unsuccessful_links=None, json_data=None):
-    combined_text = []  
+    combined_text = []
+    
+  
     if visited is None:
         visited = set()
     if link_data is None:
@@ -162,12 +165,8 @@ if __name__ == "__main__":
     client_name = "client_01"
 
     print("Scraping website...")
-    link_data = {"url": [], "status_code": [], "text": [], "title": [], "paragraphs": [],
-                 "h1_headings": [], "h2_headings": [], "h3_headings": [],
-                 "h4_headings": [], "lists": [], "images": [], "metadata": []}
-    successful_links = {"url": [], "status_code": []}
-    unsuccessful_links = {"url": [], "status_code": []}
-    extracted_text_list, links_dict, json_data = scrape_website2(start_url, depth, client_name, link_data=link_data, successful_links=successful_links, unsuccessful_links=unsuccessful_links)  
+  
+    extracted_text_list, links_dict, json_data = scrape_website2(start_url, depth, client_name = client_name)  
 
     directory = "extracted_data_json"
     if not os.path.exists(directory):
@@ -182,7 +181,7 @@ if __name__ == "__main__":
     print("Scraping complete and  saved Json!")
 
 
-    previous_json_path = "scraped_data.json"
-    current_json_path = "scraped_data.json"
-    changed_urls = compare_jsons(previous_json_path, current_json_path)
-    print("No of changed urls:", len(changed_urls))
+    # previous_json_path = "scraped_data.json"
+    # current_json_path = "scraped_data.json"
+    # changed_urls = compare_jsons(previous_json_path, current_json_path)
+    # print("No of changed urls:", len(changed_urls))
