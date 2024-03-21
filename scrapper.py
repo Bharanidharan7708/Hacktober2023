@@ -1,12 +1,13 @@
-#combined text where ind[0] have all info about page 1
 import json
+from webbrowser import get
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-import pandas as pd
 import os
 import re
 import datetime
+import schedule
+import time
 
 def extract_title(soup):
     title_tag = soup.title
@@ -37,11 +38,50 @@ def clean_text(raw_text):
     cleaned_text = cleaned_text.strip()
     return cleaned_text
 
-global link_data, successful_links, unsuccessful_links
+def scrape_website(url, max_depth, client_name, frequency):
+    print("Scraping started for frequency...")
+    # Schedule scraping based on frequency
+    if frequency == "hour":
+        schedule.every().hour.do(scrape_task, url=url, max_depth=max_depth, client_name=client_name)
+    elif frequency == "day":
+        schedule.every().day.at("09:00").do(scrape_task, url=url, max_depth=max_depth, client_name=client_name)
+    elif frequency == "week":
+        schedule.every().week.do(scrape_task, url=url, max_depth=max_depth, client_name=client_name)
+    elif frequency == "month":
+        schedule.every().month.do(scrape_task, url=url, max_depth=max_depth, client_name=client_name)
+    elif frequency == "minute":
+        schedule.every().minute.do(scrape_task, url=url, max_depth=max_depth, client_name=client_name)
+    else:
+        print("Invalid frequency. Please choose from 'hour', 'day', 'week', 'month', or 'minute'.")
+
+
+    # Keep the script running to execute scheduled tasks
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+def scrape_task(url, max_depth, client_name):
+    text, links_dict, json_data = scrape_website2(url, max_depth, client_name)
+
+    last_run_file = get_latest_json_file("extracted_data_json/")
+    save_data(json_data)
+    time.sleep(2)  # Wait for 2 seconds to ensure the file is saved
+    current_run_file = get_latest_json_file("extracted_data_json/")
+
+    new_changed_content = {}
+    if last_run_file and current_run_file:
+        new_changed_content = compare_jsons(last_run_file, current_run_file)
+        print("Number of contents changed:", len(new_changed_content))
+    else:
+        print("Unable to compare. One or both JSON files not found.")
+
+    print("Scrape done!")
+    return new_changed_content
+
+
 def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, link_data=None, successful_links=None, unsuccessful_links=None, json_data=None):
     combined_text = []
     
-  
     if visited is None:
         visited = set()
     if link_data is None:
@@ -61,7 +101,7 @@ def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, 
         return [], links_final, json_data  
 
     if url in visited:
-        print(f"Skipping {url} - Already visited")
+        # print(f"Skipping {url} - Already visited")
         return [], links_final, json_data  
 
     try:
@@ -70,7 +110,7 @@ def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, 
             soup = BeautifulSoup(response.content, 'html.parser')
             visited.add(url)
 
-            print(f"Scraping {url}")
+            # print(f"Scraping {url}")
             link_data["url"].append(url)
             link_data["status_code"].append(response.status_code)
             page_info = ""
@@ -109,7 +149,7 @@ def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, 
             link_data["lists"].append(" ")
             link_data["images"].append(" ")
     except Exception as e:
-        print(f"Error scraping {url}: {e}")
+        # print(f"Error scraping {url}: {e}")
         unsuccessful_links["url"].append(url)
         unsuccessful_links["status_code"].append("Error")
 
@@ -124,6 +164,16 @@ def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, 
         json_list.append({"url": url, "content": content})
     return final_text, links_final, json_list
 
+def save_data(json_data):
+    directory = "extracted_data_json"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    output_file_path = "extracted_data_json/textual_data_{timestamp}.json"
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_file_path = output_file_path.format(timestamp=timestamp)
+
+    with open(output_file_path, "w+") as json_file:
+        json.dump(json_data, json_file, indent=4)
 
 
 def compare_jsons(previous_json_path, current_json_path):
@@ -158,30 +208,25 @@ def compare_jsons(previous_json_path, current_json_path):
     return changed_urls
 
 
+def get_latest_json_file(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    files = os.listdir(directory)
+    files = [file for file in files if file.endswith(".json")]
+    if not files:
+        return None  # No JSON files found
+    latest_file =  max(files)
+    return os.path.join(directory, latest_file)
+
+
 
 if __name__ == "__main__":
     start_url = "https://www.itchotels.com/"
     depth = 2
     client_name = "client_01"
 
-    print("Scraping website...")
-  
-    extracted_text_list, links_dict, json_data = scrape_website2(start_url, depth, client_name = client_name)  
+    scrape_website(start_url, depth, client_name, frequency="minute")  
+    # dirr = get_latest_json_file("extracted_data_json/")
+    while True:
+        time.sleep(1)
 
-    directory = "extracted_data_json"
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    output_file_path = "extracted_data_json/textual_data_{timestamp}.json"
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_file_path = output_file_path.format(timestamp=timestamp)
-
-    with open(output_file_path, "w+") as json_file:
-        json.dump(json_data, json_file, indent=4)
-
-    print("Scraping complete and  saved Json!")
-
-
-    # previous_json_path = "scraped_data.json"
-    # current_json_path = "scraped_data.json"
-    # changed_urls = compare_jsons(previous_json_path, current_json_path)
-    # print("No of changed urls:", len(changed_urls))
