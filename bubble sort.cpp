@@ -44,7 +44,7 @@ def extract_elements(soup, tags):
     return elements
 
 
-def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, link_data=None, successful_links=None, unsuccessful_links=None, json_data=None):
+def scrape_website2(url, max_depth, current_depth=1, visited=None, link_data=None, successful_links=None, unsuccessful_links=None, json_data=None):
     combined_text = []
     
     if visited is None:
@@ -73,29 +73,23 @@ def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, 
             soup = BeautifulSoup(response.content, 'html.parser')
             visited.add(url)
 
-            # Extracting useful information
             link_data["url"].append(url)
             link_data["status_code"].append(response.status_code)
             page_info = ""
 
-            # Extracting title
             title = extract_title(soup)
             if title:
                 page_info += title + "\n"
 
-            # Extracting paragraphs
             paragraphs = extract_elements(soup, ['p', 'div', 'span'])
             page_info += " ".join(paragraph for paragraph in paragraphs if paragraph) + "\n"
 
-            # Extracting headings
             headings = extract_elements(soup, ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])
             page_info += " ".join(heading for heading in headings if heading) + "\n"
 
-            # Extracting lists
             lists = extract_elements(soup, ['ul', 'ol'])
             page_info += " ".join(list_item for list_item in lists if list_item) + "\n"
 
-            # Extracting images (src attributes)
             images = extract_images(soup)
             page_info += " ".join(image for image in images if image) + "\n"
 
@@ -107,7 +101,7 @@ def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, 
             links = soup.find_all('a', href=True)
             for link in links:
                 next_url = urljoin(url, link['href'])
-                page_info, _, _ = scrape_website2(next_url, max_depth, client_name, current_depth + 1, visited, link_data, successful_links, unsuccessful_links, json_data)
+                page_info, _, _ = scrape_website2(next_url, max_depth, current_depth + 1, visited, link_data, successful_links, unsuccessful_links, json_data)
                 combined_text.extend(page_info)
 
             successful_links["url"].append(url)
@@ -139,19 +133,17 @@ def scrape_website2(url, max_depth, client_name, current_depth=1, visited=None, 
     return final_text, links_final, json_list
 
 
-def scrape_website(url, max_depth, client_name, client_path):
-    print("Scraping started for client_id:", client_name)
+def scrape_website(url, max_depth):
     print("Scraping URL:", url)
-    text, links_dict, json_data_web = scrape_website2(url, max_depth, client_name)
+    text, links_dict, json_data_web = scrape_website2(url, max_depth)
     return text, links_dict
 
 def save_to_text_file(data, filename):
     with open(filename, 'w', encoding='utf-8') as file:
         for page_content in data:
             file.write(page_content)
-            file.write('\n\n')  # Add a new line between each page's content
+            file.write('\n\n')  
 
-# Example usage:
     print(f"Data saved to {filename}")
 
 
@@ -161,6 +153,7 @@ client_name = "ClientName"
 current_dir = os.getcwd()
 client_path = os.path.join(current_dir, "uploads", client_name)
 
-scrapped_text, link_status_urls = scrape_website(start_url, depth, client_name, client_path)
-filename = 'D:/Work/ConvoCraft/src/extracted_data.txt'
-save_to_text_file(final_text, filename)
+scrapped_text, link_status_urls = scrape_website(start_url, depth)
+filename = 'C:/Users/Bharani/Desktop/Genai/extracted_data.txt'
+save_to_text_file(scrapped_text, filename)
+print(link_status_urls)
